@@ -1,0 +1,632 @@
+/*
+  BEANFUND. — Crowdfunding Platform (Minimalist Black & White Design System)
+*/
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #ffffff;
+  color: #000000;
+  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* HEADER */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 3px solid #000000;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.teddy-icon {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+}
+
+.title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+.subtitle {
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  color: #555;
+  margin-top: 3px;
+}
+
+.btn-launch {
+  font-size: 13px;
+  padding: 10px 18px;
+}
+
+/* REAL-TIME STATS DASHBOARD */
+.stats-dashboard {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 600px) {
+  .stats-dashboard {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stat-card {
+  background: #ffffff;
+  border: 2.5px solid #000000;
+  padding: 16px;
+  box-shadow: 4px 4px 0px #000000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-value {
+  font-family: 'Space Mono', monospace;
+  font-size: 24px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.stat-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+/* MAIN CONTENT */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* TOOLBAR & FILTERS */
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.filter-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.categories-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cat-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.categories-list {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cat-pill {
+  background: #ffffff;
+  color: #000000;
+  border: 2px solid #000000;
+  padding: 5px 12px;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 2px 2px 0px #000000;
+  transition: all 0.15s ease;
+}
+
+.cat-pill:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px #000000;
+}
+
+.cat-pill.active {
+  background: #000000;
+  color: #ffffff;
+}
+
+.status-toggle {
+  display: flex;
+  gap: 4px;
+  border: 2px solid #000;
+  padding: 2px;
+  background: #fff;
+}
+
+.status-btn {
+  background: transparent;
+  border: none;
+  padding: 4px 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.status-btn.active {
+  background: #000000;
+  color: #ffffff;
+}
+
+.search-box {
+  position: relative;
+  width: 100%;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 12px 16px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  border: 2.5px solid #000000;
+  background: #ffffff;
+  outline: none;
+  box-shadow: 3px 3px 0px #000000;
+}
+
+.clear-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* CAMPAIGN CARDS */
+.campaign-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .campaign-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.campaign-card {
+  background: #ffffff;
+  border: 3px solid #000000;
+  padding: 20px;
+  box-shadow: 5px 5px 0px #000000;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.campaign-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0px #000000;
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.badge {
+  background: #000000;
+  color: #ffffff;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+}
+
+.status-badge {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1.5px solid #000;
+  padding: 2px 6px;
+  background: #fff;
+}
+
+.funded-badge {
+  background: #000000;
+  color: #ffffff;
+}
+
+.campaign-title {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.campaign-tagline {
+  font-size: 13px;
+  color: #444;
+  line-height: 1.4;
+}
+
+/* PROGRESS BAR */
+.progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 12px;
+  background: #eeeeee;
+  border: 2px solid #000000;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: #000000;
+  transition: width 0.4s ease;
+}
+
+.progress-stats {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+}
+
+.card-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1.5px dashed #ccc;
+}
+
+.creator-info {
+  display: flex;
+  flex-direction: column;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: #555;
+}
+
+.creator-name {
+  font-weight: 700;
+  color: #000;
+}
+
+/* BUTTONS */
+.btn {
+  background: #000000;
+  color: #ffffff;
+  border: 2px solid #000000;
+  padding: 8px 16px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 2px 2px 0px #000000;
+  transition: all 0.15s ease;
+}
+
+.btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3.5px 3.5px 0px #000000;
+}
+
+.btn-primary {
+  background: #000000;
+  color: #ffffff;
+}
+
+/* MODALS */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-card {
+  background: #ffffff;
+  border: 3px solid #000000;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 8px 8px 0px #000000;
+  padding: 24px;
+}
+
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid #000;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal-goal-summary {
+  display: flex;
+  justify-content: space-between;
+  background: #f4f4f4;
+  border: 2px solid #000;
+  padding: 10px 14px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+}
+
+.rewards-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rewards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reward-item {
+  background: #ffffff;
+  border: 2px solid #000;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reward-item:hover,
+.reward-item.selected {
+  background: #000000;
+  color: #ffffff;
+}
+
+.reward-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.reward-perk {
+  font-size: 11px;
+  font-family: 'Space Mono', monospace;
+  margin-top: 3px;
+  opacity: 0.9;
+}
+
+.pledge-form,
+.form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.preset-pledges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.preset-btn {
+  background: #fff;
+  border: 2px solid #000;
+  padding: 6px 12px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.preset-btn.active {
+  background: #000;
+  color: #fff;
+}
+
+.form-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 500px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.modal-body input,
+.modal-body select,
+.modal-body textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid #000000;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  outline: none;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* LOADING & CARDS */
+.loading-card,
+.empty-card {
+  background: #ffffff;
+  border: 3px solid #000000;
+  padding: 48px 24px;
+  box-shadow: 6px 6px 0px #000000;
+  text-align: center;
+  font-family: 'Space Mono', monospace;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 4px solid #eee;
+  border-top: 4px solid #000;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* FLOATING ROUND MR BEAN AUDIO BUTTON */
+.floating-audio-btn {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid #000000;
+  box-shadow: 4px 4px 0px #000000;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 0;
+  overflow: visible;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.floating-audio-btn:hover {
+  transform: scale(1.08) translate(-1px, -1px);
+  box-shadow: 6px 6px 0px #000000;
+}
+
+.audio-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f4f4f4;
+}
+
+.bean-real-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.audio-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  background: #000000;
+  color: #ffffff;
+  font-size: 12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+}
+
+/* FOOTER */
+.footer {
+  margin-top: 36px;
+  border-top: 2px stroke #eee;
+  padding-top: 16px;
+  text-align: center;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: #777;
+}
