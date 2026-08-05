@@ -269,14 +269,69 @@ users = loadUsersFromDisk();
 
 let isDbConnected = false;
 
+// Mongoose Schemas & Models
+const userSchema = new mongoose.Schema({
+  id: { type: String, unique: true },
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  bio: { type: String, default: '' },
+  avatar: { type: String, default: '🧸' },
+  backedPledges: { type: Array, default: [] },
+  createdCampaigns: { type: Array, default: [] }
+});
+
+const User = mongoose.model('User', userSchema);
+
+const campaignSchema = new mongoose.Schema({
+  id: { type: String, unique: true },
+  title: { type: String, required: true },
+  tagline: { type: String },
+  description: { type: String, required: true },
+  category: { type: String, default: 'Inventions' },
+  creator: { type: String, required: true },
+  targetAmount: { type: Number, required: true },
+  raisedAmount: { type: Number, default: 0 },
+  backersCount: { type: Number, default: 0 },
+  daysLeft: { type: Number, default: 30 },
+  status: { type: String, default: 'Active' },
+  rewards: { type: Array, default: [] },
+  stretchGoals: { type: Array, default: [] },
+  budgetBreakdown: { type: Array, default: [] },
+  guestbook: { type: Array, default: [] },
+  polls: { type: Array, default: [] },
+  updates: { type: Array, default: [] },
+  createdAt: { type: String }
+});
+
+const Campaign = mongoose.model('Campaign', campaignSchema);
+
 // Attempt MongoDB Connection
 mongoose
   .connect(MONGO_URI)
-  .then(() => {
+  .then(async () => {
     isDbConnected = true;
     console.log('MongoDB connected successfully!');
+    
+    // Seed default data if MongoDB collections are empty
+    try {
+      const campaignCount = await Campaign.countDocuments();
+      if (campaignCount === 0) {
+        console.log('Seeding default campaigns to MongoDB...');
+        await Campaign.insertMany(defaultCampaigns);
+      }
+      
+      const userCount = await User.countDocuments();
+      if (userCount === 0) {
+        console.log('Seeding default users to MongoDB...');
+        const defaultUsers = loadUsersFromDisk();
+        await User.insertMany(defaultUsers);
+      }
+    } catch (seedErr) {
+      console.error('Error seeding database:', seedErr.message);
+    }
   })
   .catch((err) => {
+    isDbConnected = false;
     console.log('MongoDB not connected (Running in fast JSON-filesystem persistent mode):', err.message);
   });
 
@@ -294,97 +349,180 @@ app.get('/api/health', (req, res) => {
 // AUTHENTICATION ENDPOINTS
 
 // Register
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
   const { username, password, bio, avatar } = req.body;
   if (!username || !password) {
     return res.status(400).json({ success: false, message: 'Username and password are required' });
   }
 
-  const existing = users.find(u => u.username.toLowerCase() === username.toLowerCase());
-  if (existing) {
-    return res.status(400).json({ success: false, message: 'Username already exists' });
+  if (isDbConnected) {
+    try {
+      const existing = await User.findOne({ username: { $regex: new RegExp('^' + username + '$', 'i') } });
+      if (existing) {
+        return res.status(400).json({ success: false, message: 'Username already exists' });
+      }
+
+      const newUser = new User({
+        id: 'u_' + Date.now(),
+        username: username.trim(),
+        password: password,
+        bio: bio || 'Silly inventor in the making.',
+        avatar: avatar || '⚙️',
+        backedPledges: [],
+        createdCampaigns: []
+      });
+
+      await newUser.save();
+      res.status(201).json({ success: true, user: newUser });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  } else {
+    const existing = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'Username already exists' });
+    }
+
+    const newUser = {
+      id: 'u_' + Date.now(),
+      username: username.trim(),
+      password: password,
+      bio: bio || 'Silly inventor in the making.',
+      avatar: avatar || '⚙️',
+      backedPledges: [],
+      createdCampaigns: []
+    };
+
+    users.push(newUser);
+    saveUsersToDisk(users);
+    res.status(201).json({ success: true, user: newUser });
   }
-
-  const newUser = {
-    id: 'u_' + Date.now(),
-    username: username.trim(),
-    password: password, // Plaintext for minimal demonstration simplicity
-    bio: bio || 'Silly inventor in the making.',
-    avatar: avatar || '⚙️',
-    backedPledges: [],
-    createdCampaigns: []
-  };
-
-  users.push(newUser);
-  saveUsersToDisk(users);
-
-  res.status(201).json({ success: true, user: newUser });
 });
 
 // Login
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.status(400).json({ success: false, message: 'Username and password are required' });
   }
 
-  const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
-  if (!user) {
-    return res.status(401).json({ success: false, message: 'Invalid username or password' });
+  if (isDbConnected) {
+    try {
+      const user = await User.findOne({ username: { $regex: new RegExp('^' + username + '$', 'i') }, password });
+      if (!user) {
+        return res.status(401).json({ success: false, message: 'Invalid username or password' });
+      }
+      res.json({ success: true, user });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  } else {
+    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid username or password' });
+    }
+    res.json({ success: true, user });
   }
-
-  res.json({ success: true, user });
 });
 
 // Get User Profile details
-app.get('/api/users/:username', (req, res) => {
-  const user = users.find(u => u.username.toLowerCase() === req.params.username.toLowerCase());
-  if (!user) {
-    return res.status(404).json({ success: false, message: 'User not found' });
+app.get('/api/users/:username', async (req, res) => {
+  if (isDbConnected) {
+    try {
+      const user = await User.findOne({ username: { $regex: new RegExp('^' + req.params.username + '$', 'i') } });
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+      res.json({ success: true, user });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  } else {
+    const user = users.find(u => u.username.toLowerCase() === req.params.username.toLowerCase());
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    res.json({ success: true, user });
   }
-  res.json({ success: true, user });
 });
 
 // CROWDFUNDING ENDPOINTS
 
 // 2. GET Platform Stats Summary
-app.get('/api/stats', (req, res) => {
-  const totalRaised = campaigns.reduce((acc, c) => acc + c.raisedAmount, 0);
-  const totalBackers = campaigns.reduce((acc, c) => acc + c.backersCount, 0);
-  const totalCampaigns = campaigns.length;
-  const fundedCampaigns = campaigns.filter((c) => c.status === 'Funded' || c.raisedAmount >= c.targetAmount).length;
+app.get('/api/stats', async (req, res) => {
+  if (isDbConnected) {
+    try {
+      const allCampaigns = await Campaign.find();
+      const totalRaised = allCampaigns.reduce((acc, c) => acc + c.raisedAmount, 0);
+      const totalBackers = allCampaigns.reduce((acc, c) => acc + c.backersCount, 0);
+      const totalCampaigns = allCampaigns.length;
+      const fundedCampaigns = allCampaigns.filter((c) => c.status === 'Funded' || c.raisedAmount >= c.targetAmount).length;
 
-  res.json({
-    success: true,
-    data: {
-      totalRaised,
-      totalBackers,
-      totalCampaigns,
-      fundedCampaigns
+      res.json({
+        success: true,
+        data: { totalRaised, totalBackers, totalCampaigns, fundedCampaigns }
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
     }
-  });
+  } else {
+    const totalRaised = campaigns.reduce((acc, c) => acc + c.raisedAmount, 0);
+    const totalBackers = campaigns.reduce((acc, c) => acc + c.backersCount, 0);
+    const totalCampaigns = campaigns.length;
+    const fundedCampaigns = campaigns.filter((c) => c.status === 'Funded' || c.raisedAmount >= c.targetAmount).length;
+
+    res.json({
+      success: true,
+      data: { totalRaised, totalBackers, totalCampaigns, fundedCampaigns }
+    });
+  }
 });
 
 // 3. GET All Crowdfunding Campaigns
-app.get('/api/campaigns', (req, res) => {
-  res.json({
-    success: true,
-    count: campaigns.length,
-    data: campaigns
-  });
+app.get('/api/campaigns', async (req, res) => {
+  if (isDbConnected) {
+    try {
+      const allCampaigns = await Campaign.find().sort({ createdAt: -1 });
+      res.json({
+        success: true,
+        count: allCampaigns.length,
+        data: allCampaigns
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  } else {
+    res.json({
+      success: true,
+      count: campaigns.length,
+      data: campaigns
+    });
+  }
 });
 
 // 4. GET Single Campaign Details
-app.get('/api/campaigns/:id', (req, res) => {
-  const campaign = campaigns.find((c) => c.id === req.params.id);
-  if (!campaign) {
-    return res.status(404).json({ success: false, message: 'Campaign not found' });
+app.get('/api/campaigns/:id', async (req, res) => {
+  if (isDbConnected) {
+    try {
+      const campaign = await Campaign.findOne({ id: req.params.id });
+      if (!campaign) {
+        return res.status(404).json({ success: false, message: 'Campaign not found' });
+      }
+      res.json({ success: true, data: campaign });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  } else {
+    const campaign = campaigns.find((c) => c.id === req.params.id);
+    if (!campaign) {
+      return res.status(404).json({ success: false, message: 'Campaign not found' });
+    }
+    res.json({ success: true, data: campaign });
   }
-  res.json({ success: true, data: campaign });
 });
 
 // 5. POST Back / Pledge to a Campaign
-app.post('/api/campaigns/:id/pledge', (req, res) => {
+app.post('/api/campaigns/:id/pledge', async (req, res) => {
   const { amount, backerName, message, emoji, username } = req.body;
   const pledgeAmount = Number(amount);
 
@@ -392,69 +530,129 @@ app.post('/api/campaigns/:id/pledge', (req, res) => {
     return res.status(400).json({ success: false, message: 'Please provide a valid pledge amount' });
   }
 
-  const campaignIndex = campaigns.findIndex((c) => c.id === req.params.id);
-  if (campaignIndex === -1) {
-    return res.status(404).json({ success: false, message: 'Campaign not found' });
-  }
-
-  const campaign = campaigns[campaignIndex];
-  campaign.raisedAmount += pledgeAmount;
-  campaign.backersCount += 1;
-
-  // Add backer comments/doodle directly to the guestbook wall
-  const cleanBackerName = (backerName && backerName.trim()) ? backerName.trim() : 'Anonymous Patron';
-  const newMsg = {
-    id: 'm_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-    backerName: cleanBackerName,
-    message: message && message.trim() ? message.trim() : `Pledged $${pledgeAmount} to support this ridiculous project!`,
-    emoji: emoji || '🤝',
-    createdAt: new Date().toISOString()
-  };
-
-  if (!campaign.guestbook) campaign.guestbook = [];
-  campaign.guestbook.unshift(newMsg);
-
-  // Update Stretch Goals unlock status dynamically based on funding
-  if (campaign.stretchGoals) {
-    campaign.stretchGoals = campaign.stretchGoals.map(goal => {
-      if (campaign.raisedAmount >= goal.value) {
-        return { ...goal, unlocked: true };
+  if (isDbConnected) {
+    try {
+      const campaign = await Campaign.findOne({ id: req.params.id });
+      if (!campaign) {
+        return res.status(404).json({ success: false, message: 'Campaign not found' });
       }
-      return goal;
+
+      campaign.raisedAmount += pledgeAmount;
+      campaign.backersCount += 1;
+
+      const cleanBackerName = (backerName && backerName.trim()) ? backerName.trim() : 'Anonymous Patron';
+      const newMsg = {
+        id: 'm_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        backerName: cleanBackerName,
+        message: message && message.trim() ? message.trim() : `Pledged $${pledgeAmount} to support this ridiculous project!`,
+        emoji: emoji || '🤝',
+        createdAt: new Date().toISOString()
+      };
+
+      if (!campaign.guestbook) campaign.guestbook = [];
+      campaign.guestbook.unshift(newMsg);
+
+      if (campaign.stretchGoals) {
+        campaign.stretchGoals = campaign.stretchGoals.map(goal => {
+          if (campaign.raisedAmount >= goal.value) {
+            return { ...goal, unlocked: true };
+          }
+          return goal;
+        });
+      }
+
+      if (campaign.raisedAmount >= campaign.targetAmount) {
+        campaign.status = 'Funded';
+      }
+
+      campaign.markModified('guestbook');
+      campaign.markModified('stretchGoals');
+      await campaign.save();
+
+      if (username) {
+        const user = await User.findOne({ username: { $regex: new RegExp('^' + username + '$', 'i') } });
+        if (user) {
+          if (!user.backedPledges) user.backedPledges = [];
+          user.backedPledges.unshift({
+            campaignId: campaign.id,
+            title: campaign.title,
+            amount: pledgeAmount,
+            timestamp: new Date().toISOString()
+          });
+          user.markModified('backedPledges');
+          await user.save();
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Successfully pledged $${pledgeAmount}! Thank you for backing ${campaign.title}.`,
+        data: campaign
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  } else {
+    const campaignIndex = campaigns.findIndex((c) => c.id === req.params.id);
+    if (campaignIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Campaign not found' });
+    }
+
+    const campaign = campaigns[campaignIndex];
+    campaign.raisedAmount += pledgeAmount;
+    campaign.backersCount += 1;
+
+    const cleanBackerName = (backerName && backerName.trim()) ? backerName.trim() : 'Anonymous Patron';
+    const newMsg = {
+      id: 'm_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+      backerName: cleanBackerName,
+      message: message && message.trim() ? message.trim() : `Pledged $${pledgeAmount} to support this ridiculous project!`,
+      emoji: emoji || '🤝',
+      createdAt: new Date().toISOString()
+    };
+
+    if (!campaign.guestbook) campaign.guestbook = [];
+    campaign.guestbook.unshift(newMsg);
+
+    if (campaign.stretchGoals) {
+      campaign.stretchGoals = campaign.stretchGoals.map(goal => {
+        if (campaign.raisedAmount >= goal.value) {
+          return { ...goal, unlocked: true };
+        }
+        return goal;
+      });
+    }
+
+    if (campaign.raisedAmount >= campaign.targetAmount) {
+      campaign.status = 'Funded';
+    }
+
+    if (username) {
+      const userIndex = users.findIndex(u => u.username.toLowerCase() === username.toLowerCase());
+      if (userIndex !== -1) {
+        if (!users[userIndex].backedPledges) users[userIndex].backedPledges = [];
+        users[userIndex].backedPledges.unshift({
+          campaignId: campaign.id,
+          title: campaign.title,
+          amount: pledgeAmount,
+          timestamp: new Date().toISOString()
+        });
+        saveUsersToDisk(users);
+      }
+    }
+
+    saveCampaignsToDisk(campaigns);
+
+    res.json({
+      success: true,
+      message: `Successfully pledged $${pledgeAmount}! Thank you for backing ${campaign.title}.`,
+      data: campaign
     });
   }
-
-  if (campaign.raisedAmount >= campaign.targetAmount) {
-    campaign.status = 'Funded';
-  }
-
-  // Associate with logged-in user profile if provided
-  if (username) {
-    const userIndex = users.findIndex(u => u.username.toLowerCase() === username.toLowerCase());
-    if (userIndex !== -1) {
-      if (!users[userIndex].backedPledges) users[userIndex].backedPledges = [];
-      users[userIndex].backedPledges.unshift({
-        campaignId: campaign.id,
-        title: campaign.title,
-        amount: pledgeAmount,
-        timestamp: new Date().toISOString()
-      });
-      saveUsersToDisk(users);
-    }
-  }
-
-  // Save changes to disk
-  saveCampaignsToDisk(campaigns);
-
-  res.json({
-    success: true,
-    message: `Successfully pledged $${pledgeAmount}! Thank you for backing ${campaign.title}.`,
-    data: campaign
-  });
 });
 
 // 6. POST Launch New Crowdfunding Campaign
-app.post('/api/campaigns', (req, res) => {
+app.post('/api/campaigns', async (req, res) => {
   const { title, tagline, description, category, creator, targetAmount, daysLeft, rewards, stretchGoals, budgetBreakdown } = req.body;
 
   if (!title || !description || !targetAmount) {
@@ -463,7 +661,6 @@ app.post('/api/campaigns', (req, res) => {
 
   const target = Number(targetAmount);
 
-  // Auto-generate standard Mr. Bean-themed budget breakdown if not provided
   const defaultBudget = [
     { label: 'Materials & Assembly', percentage: 50 },
     { label: 'Design & Prototyping', percentage: 30 },
@@ -471,7 +668,6 @@ app.post('/api/campaigns', (req, res) => {
     { label: 'Emergency Tea Rations', percentage: 10 }
   ];
 
-  // Auto-generate stretch goals based on target goal if not provided
   const defaultStretch = [
     { value: Math.round(target * 1.2), label: 'Unlock deluxe material finish', unlocked: false },
     { value: Math.round(target * 1.5), label: 'Add motorized auto-wiggle action', unlocked: false },
@@ -480,7 +676,7 @@ app.post('/api/campaigns', (req, res) => {
 
   const campaignId = Date.now().toString();
 
-  const newCampaign = {
+  const newCampaignData = {
     id: campaignId,
     title,
     tagline: tagline || title,
@@ -523,180 +719,339 @@ app.post('/api/campaigns', (req, res) => {
     createdAt: new Date().toISOString()
   };
 
-  campaigns.unshift(newCampaign);
-  saveCampaignsToDisk(campaigns);
+  if (isDbConnected) {
+    try {
+      const newCampaign = new Campaign(newCampaignData);
+      await newCampaign.save();
 
-  // Link campaign to user profile if creator matches a registered username
-  const userIndex = users.findIndex(u => u.username.toLowerCase() === creator.toLowerCase());
-  if (userIndex !== -1) {
-    if (!users[userIndex].createdCampaigns) users[userIndex].createdCampaigns = [];
-    users[userIndex].createdCampaigns.push(campaignId);
-    saveUsersToDisk(users);
+      const user = await User.findOne({ username: { $regex: new RegExp('^' + newCampaignData.creator + '$', 'i') } });
+      if (user) {
+        if (!user.createdCampaigns) user.createdCampaigns = [];
+        user.createdCampaigns.push(campaignId);
+        user.markModified('createdCampaigns');
+        await user.save();
+      }
+
+      res.status(201).json({ success: true, data: newCampaign });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  } else {
+    campaigns.unshift(newCampaignData);
+    saveCampaignsToDisk(campaigns);
+
+    const userIndex = users.findIndex(u => u.username.toLowerCase() === newCampaignData.creator.toLowerCase());
+    if (userIndex !== -1) {
+      if (!users[userIndex].createdCampaigns) users[userIndex].createdCampaigns = [];
+      users[userIndex].createdCampaigns.push(campaignId);
+      saveUsersToDisk(users);
+    }
+
+    res.status(201).json({ success: true, data: newCampaignData });
   }
-
-  res.status(201).json({ success: true, data: newCampaign });
 });
 
 // 7. POST Add Message to Guestbook directly
-app.post('/api/campaigns/:id/messages', (req, res) => {
+app.post('/api/campaigns/:id/messages', async (req, res) => {
   const { name, message, emoji } = req.body;
 
   if (!message || !message.trim()) {
     return res.status(400).json({ success: false, message: 'Message is required' });
   }
 
-  const campaignIndex = campaigns.findIndex((c) => c.id === req.params.id);
-  if (campaignIndex === -1) {
-    return res.status(404).json({ success: false, message: 'Campaign not found' });
+  if (isDbConnected) {
+    try {
+      const campaign = await Campaign.findOne({ id: req.params.id });
+      if (!campaign) {
+        return res.status(404).json({ success: false, message: 'Campaign not found' });
+      }
+
+      const newMsg = {
+        id: 'm_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        backerName: name && name.trim() ? name.trim() : 'Anonymous Fan',
+        message: message.trim(),
+        emoji: emoji || '💬',
+        createdAt: new Date().toISOString()
+      };
+
+      if (!campaign.guestbook) campaign.guestbook = [];
+      campaign.guestbook.unshift(newMsg);
+      campaign.markModified('guestbook');
+      await campaign.save();
+
+      res.json({ success: true, data: newMsg });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  } else {
+    const campaignIndex = campaigns.findIndex((c) => c.id === req.params.id);
+    if (campaignIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Campaign not found' });
+    }
+
+    const campaign = campaigns[campaignIndex];
+    const newMsg = {
+      id: 'm_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+      backerName: name && name.trim() ? name.trim() : 'Anonymous Fan',
+      message: message.trim(),
+      emoji: emoji || '💬',
+      createdAt: new Date().toISOString()
+    };
+
+    if (!campaign.guestbook) campaign.guestbook = [];
+    campaign.guestbook.unshift(newMsg);
+
+    saveCampaignsToDisk(campaigns);
+    res.json({ success: true, data: newMsg });
   }
-
-  const campaign = campaigns[campaignIndex];
-  const newMsg = {
-    id: 'm_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-    backerName: name && name.trim() ? name.trim() : 'Anonymous Fan',
-    message: message.trim(),
-    emoji: emoji || '💬',
-    createdAt: new Date().toISOString()
-  };
-
-  if (!campaign.guestbook) campaign.guestbook = [];
-  campaign.guestbook.unshift(newMsg);
-
-  saveCampaignsToDisk(campaigns);
-
-  res.json({ success: true, data: newMsg });
 });
 
 // 8. POST Vote in a Poll
-app.post('/api/campaigns/:id/polls/:pollId/vote', (req, res) => {
+app.post('/api/campaigns/:id/polls/:pollId/vote', async (req, res) => {
   const { optionId } = req.body;
 
   if (!optionId) {
     return res.status(400).json({ success: false, message: 'Option ID is required' });
   }
 
-  const campaignIndex = campaigns.findIndex((c) => c.id === req.params.id);
-  if (campaignIndex === -1) {
-    return res.status(404).json({ success: false, message: 'Campaign not found' });
+  if (isDbConnected) {
+    try {
+      const campaign = await Campaign.findOne({ id: req.params.id });
+      if (!campaign) {
+        return res.status(404).json({ success: false, message: 'Campaign not found' });
+      }
+      if (!campaign.polls) {
+        return res.status(404).json({ success: false, message: 'Polls not found' });
+      }
+
+      const poll = campaign.polls.find(p => p.id === req.params.pollId);
+      if (!poll) {
+        return res.status(404).json({ success: false, message: 'Poll not found' });
+      }
+
+      const option = poll.options.find(o => o.id === optionId);
+      if (!option) {
+        return res.status(404).json({ success: false, message: 'Option not found' });
+      }
+
+      option.votes += 1;
+      campaign.markModified('polls');
+      await campaign.save();
+
+      res.json({ success: true, data: poll });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  } else {
+    const campaignIndex = campaigns.findIndex((c) => c.id === req.params.id);
+    if (campaignIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Campaign not found' });
+    }
+
+    const campaign = campaigns[campaignIndex];
+    if (!campaign.polls) {
+      return res.status(404).json({ success: false, message: 'Polls not found' });
+    }
+
+    const poll = campaign.polls.find(p => p.id === req.params.pollId);
+    if (!poll) {
+      return res.status(404).json({ success: false, message: 'Poll not found' });
+    }
+
+    const option = poll.options.find(o => o.id === optionId);
+    if (!option) {
+      return res.status(404).json({ success: false, message: 'Option not found' });
+    }
+
+    option.votes += 1;
+    saveCampaignsToDisk(campaigns);
+
+    res.json({ success: true, data: poll });
   }
-
-  const campaign = campaigns[campaignIndex];
-  if (!campaign.polls) {
-    return res.status(404).json({ success: false, message: 'Polls not found' });
-  }
-
-  const poll = campaign.polls.find(p => p.id === req.params.pollId);
-  if (!poll) {
-    return res.status(404).json({ success: false, message: 'Poll not found' });
-  }
-
-  const option = poll.options.find(o => o.id === optionId);
-  if (!option) {
-    return res.status(404).json({ success: false, message: 'Option not found' });
-  }
-
-  option.votes += 1;
-  saveCampaignsToDisk(campaigns);
-
-  res.json({ success: true, data: poll });
 });
 
 // 9. POST React to an Update
-app.post('/api/campaigns/:id/updates/:updateId/react', (req, res) => {
+app.post('/api/campaigns/:id/updates/:updateId/react', async (req, res) => {
   const { emoji } = req.body;
 
   if (!emoji) {
     return res.status(400).json({ success: false, message: 'Emoji is required' });
   }
 
-  const campaignIndex = campaigns.findIndex((c) => c.id === req.params.id);
-  if (campaignIndex === -1) {
-    return res.status(404).json({ success: false, message: 'Campaign not found' });
+  if (isDbConnected) {
+    try {
+      const campaign = await Campaign.findOne({ id: req.params.id });
+      if (!campaign) {
+        return res.status(404).json({ success: false, message: 'Campaign not found' });
+      }
+      if (!campaign.updates) {
+        return res.status(404).json({ success: false, message: 'Updates not found' });
+      }
+
+      const update = campaign.updates.find(u => u.id === req.params.updateId);
+      if (!update) {
+        return res.status(404).json({ success: false, message: 'Update not found' });
+      }
+
+      if (!update.reactions) {
+        update.reactions = {};
+      }
+
+      update.reactions[emoji] = (update.reactions[emoji] || 0) + 1;
+      campaign.markModified('updates');
+      await campaign.save();
+
+      res.json({ success: true, data: update });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  } else {
+    const campaignIndex = campaigns.findIndex((c) => c.id === req.params.id);
+    if (campaignIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Campaign not found' });
+    }
+
+    const campaign = campaigns[campaignIndex];
+    if (!campaign.updates) {
+      return res.status(404).json({ success: false, message: 'Updates not found' });
+    }
+
+    const update = campaign.updates.find(u => u.id === req.params.updateId);
+    if (!update) {
+      return res.status(404).json({ success: false, message: 'Update not found' });
+    }
+
+    if (!update.reactions) {
+      update.reactions = {};
+    }
+
+    update.reactions[emoji] = (update.reactions[emoji] || 0) + 1;
+    saveCampaignsToDisk(campaigns);
+
+    res.json({ success: true, data: update });
   }
-
-  const campaign = campaigns[campaignIndex];
-  if (!campaign.updates) {
-    return res.status(404).json({ success: false, message: 'Updates not found' });
-  }
-
-  const update = campaign.updates.find(u => u.id === req.params.updateId);
-  if (!update) {
-    return res.status(404).json({ success: false, message: 'Update not found' });
-  }
-
-  if (!update.reactions) {
-    update.reactions = {};
-  }
-
-  update.reactions[emoji] = (update.reactions[emoji] || 0) + 1;
-  saveCampaignsToDisk(campaigns);
-
-  res.json({ success: true, data: update });
 });
 
 // 10. POST Post Creator Update
-app.post('/api/campaigns/:id/updates', (req, res) => {
+app.post('/api/campaigns/:id/updates', async (req, res) => {
   const { title, body } = req.body;
 
   if (!title || !body) {
     return res.status(400).json({ success: false, message: 'Title and body are required' });
   }
 
-  const campaignIndex = campaigns.findIndex((c) => c.id === req.params.id);
-  if (campaignIndex === -1) {
-    return res.status(404).json({ success: false, message: 'Campaign not found' });
+  if (isDbConnected) {
+    try {
+      const campaign = await Campaign.findOne({ id: req.params.id });
+      if (!campaign) {
+        return res.status(404).json({ success: false, message: 'Campaign not found' });
+      }
+
+      const newUpdate = {
+        id: 'u_' + Date.now(),
+        title,
+        body,
+        createdAt: new Date().toISOString(),
+        reactions: { '🧸': 0, '❤️': 0, '😂': 0, '🔥': 0, '👍': 0 }
+      };
+
+      if (!campaign.updates) campaign.updates = [];
+      campaign.updates.unshift(newUpdate);
+      campaign.markModified('updates');
+      await campaign.save();
+
+      res.status(201).json({ success: true, data: campaign });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  } else {
+    const campaignIndex = campaigns.findIndex((c) => c.id === req.params.id);
+    if (campaignIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Campaign not found' });
+    }
+
+    const campaign = campaigns[campaignIndex];
+    const newUpdate = {
+      id: 'u_' + Date.now(),
+      title,
+      body,
+      createdAt: new Date().toISOString(),
+      reactions: { '🧸': 0, '❤️': 0, '😂': 0, '🔥': 0, '👍': 0 }
+    };
+
+    if (!campaign.updates) campaign.updates = [];
+    campaign.updates.unshift(newUpdate);
+
+    saveCampaignsToDisk(campaigns);
+    res.status(201).json({ success: true, data: campaign });
   }
-
-  const campaign = campaigns[campaignIndex];
-  const newUpdate = {
-    id: 'u_' + Date.now(),
-    title,
-    body,
-    createdAt: new Date().toISOString(),
-    reactions: { '🧸': 0, '❤️': 0, '😂': 0, '🔥': 0, '👍': 0 }
-  };
-
-  if (!campaign.updates) campaign.updates = [];
-  campaign.updates.unshift(newUpdate);
-
-  saveCampaignsToDisk(campaigns);
-
-  res.status(201).json({ success: true, data: campaign });
 });
 
 // 11. POST Post Creator Poll
-app.post('/api/campaigns/:id/polls', (req, res) => {
+app.post('/api/campaigns/:id/polls', async (req, res) => {
   const { question, options } = req.body;
 
   if (!question || !options || !Array.isArray(options) || options.length < 2) {
     return res.status(400).json({ success: false, message: 'Question and at least 2 options are required' });
   }
 
-  const campaignIndex = campaigns.findIndex((c) => c.id === req.params.id);
-  if (campaignIndex === -1) {
-    return res.status(404).json({ success: false, message: 'Campaign not found' });
+  if (isDbConnected) {
+    try {
+      const campaign = await Campaign.findOne({ id: req.params.id });
+      if (!campaign) {
+        return res.status(404).json({ success: false, message: 'Campaign not found' });
+      }
+
+      const newPoll = {
+        id: 'p_' + Date.now(),
+        question,
+        options: options.map((opt, index) => ({
+          id: 'o_' + index + '_' + Date.now(),
+          label: opt.trim(),
+          votes: 0
+        }))
+      };
+
+      if (!campaign.polls) campaign.polls = [];
+      campaign.polls.unshift(newPoll);
+      campaign.markModified('polls');
+      await campaign.save();
+
+      res.status(201).json({ success: true, data: campaign });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  } else {
+    const campaignIndex = campaigns.findIndex((c) => c.id === req.params.id);
+    if (campaignIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Campaign not found' });
+    }
+
+    const campaign = campaigns[campaignIndex];
+    const newPoll = {
+      id: 'p_' + Date.now(),
+      question,
+      options: options.map((opt, index) => ({
+        id: 'o_' + index + '_' + Date.now(),
+        label: opt.trim(),
+        votes: 0
+      }))
+    };
+
+    if (!campaign.polls) campaign.polls = [];
+    campaign.polls.unshift(newPoll);
+
+    saveCampaignsToDisk(campaigns);
+    res.status(201).json({ success: true, data: campaign });
   }
-
-  const campaign = campaigns[campaignIndex];
-  const newPoll = {
-    id: 'p_' + Date.now(),
-    question,
-    options: options.map((opt, index) => ({
-      id: 'o_' + index + '_' + Date.now(),
-      label: opt.trim(),
-      votes: 0
-    }))
-  };
-
-  if (!campaign.polls) campaign.polls = [];
-  campaign.polls.unshift(newPoll);
-
-  saveCampaignsToDisk(campaigns);
-
-  res.status(201).json({ success: true, data: campaign });
 });
 
 // Start Server
-app.listen(PORT, () => {
-  console.log(`BEANFUND API Server running on http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`BEANFUND API Server running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
+
