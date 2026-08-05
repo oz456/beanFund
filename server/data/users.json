@@ -1,0 +1,38 @@
+[
+  {
+    "id": "u_1",
+    "username": "bean",
+    "password": "123",
+    "bio": "Inventor, driver of the lime-green Mini, best friend of Teddy.",
+    "avatar": "🧸",
+    "backedPledges": [],
+    "createdCampaigns": [
+      "1"
+    ]
+  },
+  {
+    "id": "u_2",
+    "username": "irma",
+    "password": "123",
+    "bio": "Enthusiastic Teddy admirer and local cinema fan.",
+    "avatar": "❤️",
+    "backedPledges": [
+      {
+        "campaignId": "1",
+        "title": "Teddy 2.0: AI-Powered Autonomous Companion",
+        "amount": 200,
+        "timestamp": "2026-08-05T00:40:17.481Z"
+      }
+    ],
+    "createdCampaigns": []
+  },
+  {
+    "id": "u_3",
+    "username": "wicket",
+    "password": "123",
+    "bio": "Tough landlady. Demands quiet, rent on time, and Scrapper's food served hot.",
+    "avatar": "😾",
+    "backedPledges": [],
+    "createdCampaigns": []
+  }
+]
