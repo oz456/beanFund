@@ -23,6 +23,18 @@ Built to demonstrate **modern full-stack practices**, the application features:
 
 ---
 
+## 📸 Screen Previews
+
+| **Landing Page & Main Stats** | **Category Project Filtering** |
+|:---:|:---:|
+| ![Landing Page](./screenshots/landing_page.png) | ![Filtered Projects](./screenshots/filtered_projects.png) |
+| **Interactive Campaign Details** | **Pledge Tier Selection** |
+| ![Campaign Detail](./screenshots/campaign_detail.png) | ![Pledge Section](./screenshots/pledge_section.png) |
+| **Creator Studio - Launch Form** | |
+| ![Campaign Creation Form](./screenshots/campaign_creation_form.png) | |
+
+---
+
 ## 🎨 Neubrutalism Design Philosophy
 
 The application utilizes a premium **Neubrutalism Black & White** styling concept:
