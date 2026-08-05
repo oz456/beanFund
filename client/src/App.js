@@ -4,7 +4,7 @@ import mrBeanImg from 'url:./mr-bean.png';
 import themeSong from 'url:./mr-bean-theme.mp3';
 import './App.css';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000/api';
 
 // Bean-o-Matic generator pools
 const SUBJECTS = [
