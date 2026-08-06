@@ -63,6 +63,9 @@ The application utilizes a premium **Neubrutalism Black & White** styling concep
 
 ## 📂 Directory Structure
 
+
+
+  
 ```
 beanFund/
 ├── .env.example              # Template file for database, ports, and tokens
